@@ -1,11 +1,19 @@
-import { useEffect, useState } from 'react';
-import { Mic, MicOff, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { Mic, MicOff, Loader2,  Save, ChevronDown, ChevronUp  } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAudioRecorder } from './hooks/useAudioRecorder';
 
+interface Note {
+  id: string;
+  text: string;
+  timestamp: string;
+}
+
 const SpeechToText = () => {
-  const {startRecording, stopRecording, isRecording, error, transcribedText} = useAudioRecorder();
+  const {startRecording, stopRecording, isRecording, error, transcribedText, setTranscribedText} = useAudioRecorder();
+  const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
+  const [notes, setNotes] = useState<Note[]>([])
   
   const handleToggleRecording = async () => {
     if (isRecording) {
@@ -14,7 +22,25 @@ const SpeechToText = () => {
       await startRecording();
     }
   }
-  
+
+  const handleSaveNote = () => {
+    if (transcribedText.trim()) {
+      const newNote: Note = {
+        id: Date.now().toString(),
+        text: transcribedText.trim(),
+        timestamp: new Date().toLocaleString()
+      };
+      setNotes(prev => [newNote, ...prev]);
+      
+      // Clear the transcribed text
+      setTranscribedText('');
+    }
+  };
+
+  const toggleNoteExpansion = (noteId: string) => {
+    setExpandedNoteId(expandedNoteId === noteId ? null : noteId);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-2xl mx-auto">
@@ -46,6 +72,14 @@ const SpeechToText = () => {
                     </>
                   )}
                 </Button>
+                <Button
+                  onClick={handleSaveNote}
+                  disabled={!transcribedText.trim()}
+                  className="flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  Save Note
+                </Button>
               </div>
             </CardTitle>
           </CardHeader>
@@ -69,6 +103,41 @@ const SpeechToText = () => {
             </div>
           </CardContent>
         </Card>
+        
+        {notes.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Saved Notes</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {notes.map((note) => (
+                <Card 
+                  key={note.id} 
+                  className="cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => toggleNoteExpansion(note.id)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">{note.timestamp}</p>
+                        <p className="text-gray-700 mt-1">
+                          {expandedNoteId === note.id 
+                            ? note.text
+                            : note.text.slice(0, 100) + (note.text.length > 100 ? '...' : '')}
+                        </p>
+                      </div>
+                      {expandedNoteId === note.id ? (
+                        <ChevronUp className="w-4 h-4 text-gray-500" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

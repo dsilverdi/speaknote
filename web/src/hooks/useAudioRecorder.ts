@@ -79,7 +79,8 @@ export const useAudioRecorder = () => {
         stopRecording, 
         isRecording: recordingState.isRecording,
         error,
-        transcribedText
+        transcribedText,
+        setTranscribedText
     }
 }
 

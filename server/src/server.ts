@@ -1,6 +1,6 @@
 import express, {Express} from "express";
 import cors from "cors";
-import { Server } from "socket.io";
+import { Server, Socket } from "socket.io";
 import { createServer } from "http";
 import dotenv from "dotenv";
 import {createClient, LiveTranscriptionEvents} from "@deepgram/sdk"
@@ -23,29 +23,26 @@ const io = new Server(httpserver, {
 
 const deepgram = createClient(process.env.DEEPGRAM_SECRET);
 
-io.on('connection', (socket) => {
-    console.log("Client connected", socket.id);
-
+const setupDeepgram = (ws: Socket) => {
     const connection = deepgram.listen.live({
         model: "nova-2",
         language: "en-US",
         smart_format: true,
     });
     
-      // STEP 3: Listen for events from the live transcription connection
+    // STEP 3: Listen for events from the live transcription connection
     connection.on(LiveTranscriptionEvents.Open, () => {
         console.log("deepgram connection opened");
 
         connection.on(LiveTranscriptionEvents.Close, () => {
-            console.log("Connection closed.");
+            console.log("deepgram connection closed.");
         });
 
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
             const transcript = data.channel.alternatives[0].transcript;
             if (transcript) {
-                socket.emit("transcription", transcript)
+                ws.emit("transcription", transcript)
             }
-
         });
 
         connection.on(LiveTranscriptionEvents.Metadata, (data) => {
@@ -57,13 +54,29 @@ io.on('connection', (socket) => {
         });
     });
 
+    return connection
+}
+
+io.on('connection', (socket) => { 
+    console.log("Client connected", socket.id);
+
+    let deepgram = setupDeepgram(socket)
     socket.on("audioData", (data) => {
-        if (connection.getReadyState() === 1) {
+        console.log("audio get")
+        if (deepgram.getReadyState() === 1) {
             try {
-                connection.send(data.audio);
+                console.log("send data")
+                deepgram.send(data.audio);
             } catch (error) {
                 console.log("Error Sending data to deepgram")
             }
+        } else if (deepgram.getReadyState() >= 2) { 
+            console.log("ws: data couldn't be sent to deepgram");
+            console.log("ws: retrying connection to deepgram");
+            /* Attempt to reopen the Deepgram connection */
+            deepgram.requestClose();
+            deepgram.removeAllListeners();
+            deepgram = setupDeepgram(socket);
         } else {
             console.warn("Deepgram connection not ready for socket:", socket.id);
         }
