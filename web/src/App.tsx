@@ -21,7 +21,7 @@ const SpeechToText = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>Speech to Text Converter</span>
+              <span>Speaknote</span>
               <div className="flex items-center gap-2">
                 {isRecording && (
                   <div className="flex items-center gap-2">
