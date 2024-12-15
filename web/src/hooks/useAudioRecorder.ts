@@ -1,5 +1,6 @@
-import {useState, useCallback, useEffect} from 'react'
+import {useState, useCallback, useEffect, useRef} from 'react'
 import {AudioRecorder, RecordingState} from '@/lib/AudioRecorder'
+import { AudioSocketClient  } from '@/lib/socket';
 
 export const useAudioRecorder = () => {
     const [recorder, setRecorder] = useState<AudioRecorder | null>(null);
@@ -9,12 +10,22 @@ export const useAudioRecorder = () => {
     })
 
     const [error, setError] = useState<Error | null>(null);
-    const [audioBlobs, setAudioBlobs] = useState<Blob[]>([]);
+    const socketClientRef = useRef<AudioSocketClient | null>(null);
+    const [transcribedText, setTranscribedText] = useState('');
+
+    useEffect(()=>{
+        socketClientRef.current = new AudioSocketClient();
+
+        return ()=> {
+            socketClientRef.current?.disconnect();
+        }
+    }, [])
+
 
     useEffect(()=> {
         const newRecorder = new AudioRecorder({
             onDataAvailable: (data) => {
-                setAudioBlobs(prev => [...prev, data])
+                socketClientRef.current?.sendAudioChunk(data);
             },
             onRecordingComplete: (recording) => {
                 console.log("Recording Complete", recording)
@@ -28,15 +39,25 @@ export const useAudioRecorder = () => {
 
         return () => {
             if (newRecorder.recordingState.isRecording) {
-                newRecorder.startRecording().catch(console.error)
+                newRecorder.stopRecording().catch(console.error)
             }
         }
     }, []);
 
+    useEffect(() => {
+        const socket = socketClientRef.current?.socket;
+        
+        if (socket) {
+          socket.on('transcription', (text: string) => {
+            setTranscribedText(prev => prev + ' ' + text);
+          });
+        }
+      }, []);
+    
+
     const startRecording = useCallback(async ()=>{
         try {
             setError(null);
-            setAudioBlobs([]);
             await recorder?.startRecording();
             setRecordingState(recorder?.recordingState || {isRecording: false, state: 'inactive'})
         } catch (err) {
@@ -58,7 +79,7 @@ export const useAudioRecorder = () => {
         stopRecording, 
         isRecording: recordingState.isRecording,
         error,
-        audioBlobs
+        transcribedText
     }
 }
 

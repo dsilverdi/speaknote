@@ -1,5 +1,5 @@
 <div align="center">
-<h1>wejio</h1>
-Need friends? Talk with Wejio 🎵
+<h1>speaknote</h1>
+Need friends? Talk with Speaknote 🎵
 </div>
 

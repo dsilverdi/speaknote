@@ -1,13 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Mic, MicOff, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAudioRecorder } from './hooks/useAudioRecorder';
 
-
 const SpeechToText = () => {
-  const {startRecording, stopRecording, isRecording, error, audioBlobs} = useAudioRecorder();
-  const [transcribedText, setTranscribedText] = useState('');
+  const {startRecording, stopRecording, isRecording, error, transcribedText} = useAudioRecorder();
   
   const handleToggleRecording = async () => {
     if (isRecording) {
@@ -17,13 +15,6 @@ const SpeechToText = () => {
     }
   }
   
-  // Placeholder for recording functionality
-  useEffect(()=>{
-    if (audioBlobs.length > 0) {
-      // TODO 
-      console.log("Audio Blob available ", audioBlobs[audioBlobs.length - 1])
-    }
-  }, [audioBlobs])
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-2xl mx-auto">
